@@ -1,0 +1,15 @@
+{
+   "https-port": "443",
+   "interface" : "0.0.0.0",
+   "ssl": {
+      "key": "key.pem",
+      "cert": "cert.pem"
+   },
+  "database" : {
+      "type" : "mongodb",
+      "configuration" :  {
+         "host" : "l192.168.42.11",
+         "port" : 27017,
+         "db" : "zink"}
+  }
+}
