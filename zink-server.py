@@ -4,6 +4,8 @@ from pathlib import Path
 import http.server
 import ssl
 import json
+from mongo_db import mongo_db
+
 
 
 
@@ -17,9 +19,7 @@ configuration_file = None
 configuration = None
 
 def connect_database():
-    global configuration
-    if configuration["database"]["type"] == "mongodb":
-        connect_mongodb( configuration["database"]["confiiguration"])
+    m = mongo_db("host", 27017, "zink")
 
 
 

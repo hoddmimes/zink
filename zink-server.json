@@ -1,5 +1,5 @@
 {
-   "https-port": "443",
+   "https-port": "8888",
    "interface" : "0.0.0.0",
    "ssl": {
       "key": "key.pem",
