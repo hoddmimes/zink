@@ -1,0 +1,20 @@
+{
+    "verbose" : true,
+    "logfile" : null,
+    "authorization" : {
+        "file": "../zink-api-keys.json",
+        "save_restricted": true,
+        "find_restricted": true
+    },
+   "http_port": "8282",
+   "interface" : "0.0.0.0",
+   "ssl": {
+      "key": "../key.pem",
+      "cert": "../cert.pem"
+   },
+  "database" : {
+      "type" : "sqlite3",
+      "configuration" :  {
+        "db_file" : "../zink.db"}
+  }
+}
