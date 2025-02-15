@@ -32,7 +32,7 @@ Data can also be retrieved (i.e., **FIND**) from the Zink server via a standard 
 **SAVE events** 
 The URL path to the POST **save** entry is "/save" e.g. _https://<host>/save_
 The post data in a _save_ have the following Json format
-```json
+```
 {
   'application' : string
   'tag' : string
@@ -47,7 +47,7 @@ The post data in a _save_ have the following Json format
 The URL path to the POST **find** entry is "/save" e.g. _https://<host>/find_
 The post data in a _find_ have the following Json format
 
-```json
+```
 {
   'application': string
   'tag': string,
