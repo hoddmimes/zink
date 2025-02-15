@@ -27,47 +27,38 @@ Data can also be retrieved (i.e., **FIND**) from the Zink server via a standard 
 
 **POST requests** are JSON messages with the following structure:
 
-#### **Save Events**
-```json
-{
-  "command": "SAVE",
-  "apikey": "string",
-  "data": {
-    "application": "string",
-    "tag": "string",
-    "data": "string"
-  }
-}
 
 
 **SAVE events** 
+The URL path to the POST **save** entry is "/save" e.g. _https://<host>/save_
+The post data in a _save_ have the following Json format
 ```json
-{ 'command' : 'SAVE',
-  'apikey' : string 
-  'data' : { 
-        'application' : string
-        'tag' : string
-        'data' : string }}
+{
+  'application' : string
+  'tag' : string
+  'data' : string }
 ```
 **_NOTE:_** \
-    _'apikey' maybe mandatory or not depending on the server configuration_\
-    _'data.tag' is optional_
+    _'data.tag' is optional in save requests_
 
 **FIND events**
+The URL path to the POST **find** entry is "/save" e.g. _https://<host>/find_
+The post data in a _find_ have the following Json format
 ```json
-{ 'command' : 'FIND',
-  'apikey' : string 
-  'data' : { 
-        'application' : string
-        'tag' : string,
-        'after' : string,
-        'before' : string }}
+{
+  'application': string
+  'tag': string,
+  'after': string,
+  'before': string,
+  'limit': int
+}
 ```
 **_NOTE:_** \
-_'apikey' maybe mandatory or not depending on the server configuration_\
-_'data.tag','data.after' and 'data.before' are optional_\
-_'data.after' and 'data.before' are time strings have the following format 'yyyy-MM-dd HH:mm:ss.SSS'.
-They do not need to be complete. The time strings are padded._ 
+_'application' is mandatory_\
+_'data.tag','data.after','data.before' and limit are optional_\
+_'data.after' and 'data.before' are time strings have the following format 'yyyy-MM-dd HH:mm:ss.SSS'. They do not need to be complete. The time strings are padded._\
+_'limit' specifies max number of events that should be retreived, latest first.
+
 
 #### GET Requests
 It's possible do find Zink events directly from an ordinary browser via accessing a Zink server URL like
@@ -76,7 +67,7 @@ https://localhost:8282/FIND?apikey=6ad345f621&application=frotz&tag=foo&before=2
 ```
 **_NOTE:_** \
 _'application' is a mandatory query parameter_ \
-_'apikey' maybe mandatory or not depinging on the server configuration_ \
+_'apikey' maybe mandatory or not depending on the server configuration_ \
 _remaing parameters are optional_ \
 
 
@@ -110,6 +101,7 @@ The configuration file has the following format
 }
 ```
 
+
 **_For Mongodb usage_**
 ```json
 {
@@ -138,8 +130,10 @@ The configuration file has the following format
 
 
 **_NOTE:_**\
-If 'authorization' is not present or 'authorization.file' is null apikey verification will not take place.\
-If 'lofile' is not present or null loging will be done to stdout\
+The Zink server uses a simple API key-based authorization mechanism. If 'authorization' is present in the configuration file, the server will validate incoming requests to ensure they are authorized.
+Validation for Save and Find requests can be enabled or disabled using the _save_restricted_ and _find_restricted_ attributes, respectively.
+If 'authorization' is not present in the configuration file, no request validation will be performed.\
+If 'logfile' is not present or null loging will be done to STDOUT\
 If you would like the server to run SSL you have to generate a SSL certificate. This can be done with the following command
 ```
 $ openssl req -newkey rsa:2048 -new -nodes -x509 -days 3650 -keyout key.pem -out cert.pem

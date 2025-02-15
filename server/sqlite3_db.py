@@ -47,7 +47,7 @@ class sqlite3_db(db_base):
             self._createDb( db_file )
 
 
-        db_connection = sqlite3.connect(db_file)
+        db_connection = sqlite3.connect(db_file, check_same_thread=False)
         db_connection.isolation_level = None
         db_cursor = db_connection.cursor();
 

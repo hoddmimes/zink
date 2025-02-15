@@ -9,19 +9,19 @@ import logging
 class Aux():
 
     @staticmethod
-    def javaTimestamp():
+    def timestamp():
         st = datetime.now(tz=None)
         return int(time.mktime(st.timetuple()) * 1e3 + st.microsecond/1e3)
 
     @staticmethod
-    def javaTime():
+    def timstr():
         now = datetime.now();
         dt = now.strftime("%Y-%m-%d %H:%M:%S.%f")[0:-3]
         return dt
 
     @staticmethod
     def tosyslog( msg ):
-        dt = Aux.javaTime()
+        dt = Aux.timstr()
         syslog.syslog(dt + " " + msg)
 
 class StringBuilder():
@@ -50,8 +50,9 @@ class Zlogger():
         else:
             self.fp = sys.stdout
 
+
     def log(self, msg):
-        self.fp.write( Aux.javaTime() + " " + msg + "\n" )
+        self.fp.write( Aux.timstr() + " " + msg + "\n" )
         self.fp.flush()
 
 

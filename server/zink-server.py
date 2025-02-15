@@ -1,6 +1,5 @@
 
 import argparse
-import logging
 import atexit
 import sys
 import urllib.parse
@@ -9,120 +8,62 @@ import http.server
 import ssl
 import json
 import syslog
+from flask import Flask, request, jsonify
 from urllib.parse import urlparse
 from urllib import parse
 from aux import Aux
 from aux import StringBuilder
 from aux import Zlogger
 from api_authorization import ApiAuthorization
+
 from db_base import db_base
 from mongo_db import mongo_db
 from sqlite3_db import sqlite3_db
 
-
-db : db_base = None
-zlogger = None
-configuration_file = None
-configuration = None
-authorization = None
-
-class MyHandler(http.server.SimpleHTTPRequestHandler):
-
-
-    def logmsg(self, stscode=None, msg=None ):
-        global configuration
-
-        if configuration['verbose']:
-            if not stscode:
-                zlog(f'[REQUEST] request: {msg}' )
-            else:
-                if msg:
-                    zlog(f'[RESPONSE] sts: {str(stscode)}  message: {msg}' )
-                else:
-                    zlog(f'[RESPONSE] sts: {str(stscode)} (no message)' )
-
-    def send_error(self, stscode, message):
-        super().send_error(stscode,message)
-        self.logmsg(stscode, message)
-
-    def do_GET(self):
-        global configuration
-        global authorization
-
-        if 'favicon.ico' in self.path:
-            return self.send_response(404,"favicon.ico not found")
-
-        self.logmsg(msg="requestor host: " + self.client_address[0] + " request: " + self.path)
-
-        if not '?' in self.path:
-            return self.send_error(400,"no query parameters present in request")
-
-        _urlrqst =  urlparse( self.path );
-        if not '/FIND' == _urlrqst.path.upper():
-            return self.send_error(400,"invalid command")
-
-        _params = dict(parse.parse_qsl(parse.urlsplit(self.path).query))
-
-        if not 'application' in _params:
-            return self.send_error(400,'invalid query parameter "application" is missing')
-
-        if authorization and authorization.isFindRestricted() and not 'apikey' in _params:
-            return self.send_error(400, 'invalid query parameter "apikey" is missing')
-
-        if authorization and authorization.isFindRestricted() and not authorization.checkApiKey( _params['apikey'], 'FIND'):
-            return self.send_error(401,'unauthorized apikey')
-
-        self.defData( _params )
-
-        _result = db.find( _params['application'], _params['tag'], _params['before'], _params['after'],_params['limit'])
-        _html_string = self.buildFindPage(_result)
-
-        self.send_response(200)
-        self.send_header('Content-Type', 'text/html')
-        self.end_headers()
-        self.wfile.write( _html_string.encode('utf-8') )
-        self.logmsg( 200, _html_string.encode('utf-8'))
-
-    def buildHtmlRow( self,row ):
-        if row['tag'] :
-            _tag = row['tag']
-        else:
-            _tag = ""
-
-        sb = StringBuilder()
-        sb.append('</tr>')
-        sb.append(f'<td style="text-align: center;border-collapse: collapse;border: 1px solid darkgray">{row["time"]}</td>')
-        sb.append(f'<td style="text-align: center;border-collapse: collapse;border: 1px solid darkgray">{row["application"]}</td>')
-        sb.append(f'<td style="text-align: center;border-collapse: collapse;border: 1px solid darkgray">{_tag}</td>')
-        sb.append(f'<td style="text-align: center;border-collapse: collapse;border: 1px solid darkgray">{row["data"]}</td>')
-        sb.append('<tr>')
-        return sb.toString()
+# Global variables
+db : db_base = None             # database connection
+zlogger = None                  # Logfile handle
+configuration_file = None       # configuration file name
+configuration = None            # configuration object (Json)
+authorization = None            # authorization object
+app = Flask(__name__)           # Flask webserver
 
 
-    def buildFindPage(self, result ):
-        sb = StringBuilder()
-        sb.append("<html>")
-        sb.append('<body>')
-        sb.append('<div  style="border:2px solid black; width:80%; margin-top: 50px;background-color:#f2f2f2">')
-        sb.append('<br><br>')
-        sb.append('<table style="margin: 0 auto; font-family:arial;">')
-        sb.append('<tr>')
-        sb.append('<th style="text-align: center;border-collapse: collapse;border: 1px solid darkgray">Time</th>')
-        sb.append('<th style="text-align: center;border-collapse: collapse;border: 1px solid darkgray">Application</th>')
-        sb.append('<th style="text-align: center;border-collapse: collapse;border: 1px solid darkgray">Tag</th>')
-        sb.append('<th style="text-align: center;border-collapse: collapse;border: 1px solid darkgray">Message</th>')
-        sb.append('</tr>')
+def buildHtmlRow(row):
+    sb = StringBuilder()
+    sb.append('</tr>')
+    sb.append(f'<td style="text-align: center;border-collapse: collapse;border: 1px solid darkgray">{row["time"]}</td>')
+    sb.append(f'<td style="text-align: center;border-collapse: collapse;border: 1px solid darkgray">{row["application"]}</td>')
+    sb.append(f'<td style="text-align: center;border-collapse: collapse;border: 1px solid darkgray">{row.get("tag", '')}</td>')
+    sb.append(f'<td style="text-align: center;border-collapse: collapse;border: 1px solid darkgray">{row["data"]}</td>')
+    sb.append('<tr>')
+    return sb.toString()
 
-        for _row in result:
-            sb.append(self.buildHtmlRow( _row ))
 
-        sb.append('</table>')
-        sb.append('<br><br>')
-        sb.append('</div>')
-        sb.append('</body>')
-        sb.append('</html>')
+def buildFindPage(result):
+    sb = StringBuilder()
+    sb.append("<html>")
+    sb.append('<body>')
+    sb.append('<div  style="border:2px solid black; width:80%; margin-top: 50px;background-color:#f2f2f2">')
+    sb.append('<br><br>')
+    sb.append('<table style="margin: 0 auto; font-family:arial;">')
+    sb.append('<tr>')
+    sb.append('<th style="text-align: center;border-collapse: collapse;border: 1px solid darkgray">Time</th>')
+    sb.append('<th style="text-align: center;border-collapse: collapse;border: 1px solid darkgray">Application</th>')
+    sb.append('<th style="text-align: center;border-collapse: collapse;border: 1px solid darkgray">Tag</th>')
+    sb.append('<th style="text-align: center;border-collapse: collapse;border: 1px solid darkgray">Message</th>')
+    sb.append('</tr>')
 
-        return sb.toString()
+    for _row in result:
+        sb.append(buildHtmlRow(_row))
+
+    sb.append('</table>')
+    sb.append('<br><br>')
+    sb.append('</div>')
+    sb.append('</body>')
+    sb.append('</html>')
+
+    return sb.toString()
 
 
     def do_POST(self):
@@ -156,23 +97,11 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
         return self.logmsg(400, "Invalid command: " + str( json_data ))
 
 
-    def defData(self, json_data):
-        if not 'tag' in json_data:
-            json_data['tag'] = None
-        if not 'data' in json_data:
-            json_data['data'] = None
-        if not 'after' in json_data:
-            json_data['after'] = None
-        if not 'before' in json_data:
-            json_data['before'] = None
-        if not 'limit' in json_data:
-            json_data['limit'] = 0
-        return json_data
-
 
     def find_data( self, apikey, rqst_data):
         if not "application" in rqst_data:
-            return self.send_error( 400, "Invalid request (data): " + str( rqst_data ))
+            return self.send
+            error( 400, "Invalid request (data): " + str( rqst_data ))
 
         if authorization and authorization.isFindRestricted() and not apikey:
             return self.send_error( 400,'invalid query parameter "apikey" is missing')
@@ -220,7 +149,7 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
 
 
 
-def connect_database():
+def connectDatabase():
     global configuration
     global db
 
@@ -236,27 +165,12 @@ def connect_database():
 
 
 
-def start_web_server():
+
+
+
+def loadConfiguration( config_file ):
     global configuration
-    server_address = ( configuration["interface"],int( configuration["http_port"]))
-    httpd = http.server.HTTPServer(server_address, MyHandler)
 
-    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-    _key_file = configuration["ssl"]["key"]
-    _cert_file = configuration["ssl"]["cert"]
-    context.load_cert_chain(certfile=configuration["ssl"]["cert"], keyfile=configuration["ssl"]["key"])
-
-    httpd.socket = context.wrap_socket(httpd.socket, server_side=True)
-    Aux.tosyslog(f"Starting Web Service on interface {configuration['interface']} port {configuration['http_port']}")
-    try:
-        httpd.serve_forever()
-    except KeyboardInterrupt:
-        zlogger.log("Keyboard interruption, exiting Zink server")
-        sys.exit("\n bye, bye")
-
-
-def load_configuration( config_file ):
-    global configuration
     if config_file.exists():
         with open(config_file, 'r') as file:
             configuration = json.load(file)
@@ -282,7 +196,7 @@ def openLogfile():
         Aux.tosyslog("Created and opened logfile STDOUT")
 
 
-def load_authorization():
+def loadAuthorization():
     global configuration
     global authorization
 
@@ -299,7 +213,7 @@ def load_authorization():
 
     with open(_auth_file, 'r') as file:
         _api_keys = json.load(file)
-        print(f"Loaded ({len(_api_keys['api-keys'])}) api-keys fom api-key-file {configuration['authorization']['file']}")
+
         _find_restricted = True
         if 'find_restricted' in configuration['authorization']:
             _find_restricted = configuration['authorization']['find_restricted']
@@ -308,6 +222,7 @@ def load_authorization():
             _save_restricted = configuration['authorization']['save_restricted']
 
         authorization = ApiAuthorization( _api_keys, _find_restricted, _save_restricted, zlogger )
+        zlog(f"Loaded ({len(_api_keys['api-keys'])}) api-keys fom api-key-file {configuration['authorization']['file']}")
         Aux.tosyslog(f"Loaded authorization file {configuration['authorization']['file']}")
 
 
@@ -315,34 +230,165 @@ def zinkExit():
     Aux.tosyslog( Aux.javaTime() + " Zink server is terminating, Good Bye!")
 
 
-def main():
+def parseParameters():
     global configuration_file
-
-    syslog.openlog("zink")
     parser = argparse.ArgumentParser(
         prog="zink-server",
         description="HTTPS server capturing, event from HTTP clients",
-        epilog="Thanks for using %(prog)s!",
     )
-
-
-
 
     parser.add_argument("-cfg", "--configuration" ,  default="./zink-server-sqlite3.json")
     args = parser.parse_args()
     configuration_file = Path(args.configuration)
 
-    load_configuration(configuration_file)
+    loadConfiguration(configuration_file)
+
+def paramsToDict(params, is_json):
+    if is_json:
+        return json.loads( params )
+    else:
+        _d = {}
+        for k in params:
+            _d[k] = params[k]
+        return _d
+
+
+
+
+
+def sendError( status, msg=None):
+    if not msg:
+        zlog(f"[RESPONSE] status: {status}")
+    else:
+        zlog(f"[RESPONSE] status: {status} msg: {str(msg)}")
+
+    return app.response_class(response=msg, status=status, mimetype='text/html')
+
+@app.route('/find', methods=['GET'])
+def handle_get():
+    zlog(f"[REQUEST] [{request.method}] rmthst: {request.remote_addr} url: {request.url}")
+    _params = paramsToDict( request.args, request.is_json)
+
+    if len(_params) == 0:
+        return sendError(400,'no query parameters present in request')
+
+    if not 'application' in _params:
+        return sendError(400, 'invalid query parameter "application" is missing')
+
+    if authorization and authorization.isFindRestricted() and not 'apikey' in _params:
+        return sendError(400, 'invalid query parameter "apikey" is missing')
+
+    if authorization and authorization.isFindRestricted() and not authorization.checkApiKey( _params['apikey'], 'FIND'):
+        return sendError(401,'unauthorized apikey')
+
+    _result = db.find( _params.get('application'),
+                       _params.get('tag'),
+                       _params.get('before'),
+                       _params.get('after'),
+                       int(_params.get('limit','0')))
+    _html_string = buildFindPage(_result)
+
+    zlog(f"[RESPONSE] {_html_string.encode('utf-8')}")
+    return app.response_class(response=str(_html_string.encode('utf-8')), status=200, mimetype='text/html')
+
+@app.route('/find', methods=['POST'])
+def handle_post_find():
+    global configuration
+
+    zlog(f"[REQUEST] [{request.method}] rmthst: {request.remote_addr} url: {request.url} data: {str(request.data)}")
+
+    if not request.is_json:
+        return sendError( 400, "Invalid json request " + str(request.data))
+
+    _params = paramsToDict( request.data, request.is_json )
+
+    _apikey = request.authorization.token
+
+    if not "application" in _params:
+        return sendError( 400, "Invalid request (data): " + str( request.data ))
+
+    if authorization and authorization.isFindRestricted() and not _apikey:
+        return sendError( 400,'invalid query parameter "apikey" is missing')
+
+
+    if authorization and authorization.isFindRestricted() and not authorization.checkApiKey( _apikey,'FIND'):
+        return sendError( 401,'unauthorized apikey')
+
+    _entries = db.find( _params.get('application'), _params.get('tag'), _params.get('before'), _params.get('after'), int(_params.get('limit','0')))
+    zlog(f"[RESPONSE] status: 200 entries: {len(_entries)} \n " + str(_entries))
+
+
+    _response = app.response_class(response=json.dumps(_entries), status=200, mimetype='application/json')
+    return _response
+
+@app.route('/save', methods=['POST'])
+def handle_post_save():
+    global configuration
+
+    zlog(f"[REQUEST] [{request.method}] rmthst: {request.remote_addr} url: {request.url} data: {str(request.data)}")
+
+    if not request.is_json:
+        return sendError( 400, "Invalid json request " + str(request.data))
+
+    _params = paramsToDict( request.data, request.is_json )
+
+    _apikey = request.authorization.token
+
+    if not "application" in _params:
+        return sendError( 400, "Invalid request (application): " + str( request.data ))
+
+    if not "data" in _params:
+        return sendError( 400, "Invalid request (data): " + str( request.data ))
+
+    if authorization and authorization.isFindRestricted() and not _apikey:
+        return sendError( 400,'invalid query parameter "apikey" is missing')
+
+    if authorization and authorization.isFindRestricted() and not authorization.checkApiKey( _apikey,'SAVE'):
+        return sendError( 401,'unauthorized apikey')
+
+    db.save( _params.get('application'), _params.get('tag'), _params.get('data'))
+    zlog("[RESPONSE] status: 200")
+    _response = app.response_class(response=None, status=200, mimetype='application/json')
+    return _response
+
+def startWebServer():
+    global configuration
+
+    Aux.tosyslog(f"Starting Web Service on interface {configuration['interface']} port {configuration['http_port']}")
+
+    try:
+        app.run(host=configuration["interface"],
+                port=int( configuration["http_port"]),
+                debug=True,
+                ssl_context=(configuration["ssl"]["cert"],configuration["ssl"]["key"]))
+    except KeyboardInterrupt:
+        zlogger.log("Keyboard interruption, exiting Zink server")
+        sys.exit("\n bye, bye")
+    except Exception as e:
+        Aux.tosyslog(f"Internal server error: {str(e)}")
+        zlog(f"Internal server error: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+
+
+
+def main():
+    syslog.openlog("zink")
+
+    parseParameters()
+
     openLogfile()
-    print(f"Loaded configuration from {configuration_file}")
+
+    zlog(f"Loaded configuration from {configuration_file}")
 
     atexit.register(zinkExit)
 
-    load_authorization()
+    loadAuthorization()
 
-    connect_database()
+    connectDatabase()
 
-    start_web_server()
+    startWebServer()
 
 if __name__ == '__main__':
     main()

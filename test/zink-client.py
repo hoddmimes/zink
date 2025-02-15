@@ -5,54 +5,59 @@ import datetime
 import random
 
 connection = None
+startTime = None
 
 
 def createConnection():
     global connection
     connection = http.client.HTTPSConnection('127.0.0.1', port=8282, context = ssl._create_unverified_context())
 
-def javaTime():
+def timstr():
     now = datetime.datetime.now();
     dt = now.strftime("%Y-%m-%d %H:%M:%S.%f")[0:-3]
     return dt
 
-def saveEvents( count, current_hour ):
-    _app = f'test-{current_hour}'
+def saveEvents(  ):
+    _hh = datetime.datetime.now().hour
+    _app = f'test-{_hh}'
 
-    for i in range(count):
-        _json_msg = {'application' : _app}
-        _x = random.randint(1,10)
-        if (_x % 2) == 0:
-            _json_msg['tag'] = "tag-" + str(_x)
-        _json_msg['data'] = f'test data message {(i+1)} at {javaTime()}'
-        send_post( {'command' : 'SAVE', 'apikey': 'test', 'data' : _json_msg} )
+    _json_msg = {'application' : _app, 'data' : f'event data entered {timstr()}'}
+
+    _x = random.randint(1,10)
+    if (_x % 2) == 0:
+        _json_msg['tag'] = "tag-" + str(_x)
+
+    send_post( 'save', _json_msg )
 
 
-def findEvents( nowstr, current_hour ):
-    _app = f'test-{current_hour}'
-    # Find the last added messages
-    _json_data = {'application' : _app}
-    _json_data['after'] = nowstr
-    send_post( { 'command' : 'FIND', 'apikey': 'test', 'data' : _json_data });
+def findEvents():
+    global startTime
+    _hh = datetime.datetime.now().hour
+    _app = f'test-{_hh}'
+
+    _json_data = {'application' : _app, 'after' : startTime }
+    send_post('find', _json_data );
 
 
 def main():
-    _dt = datetime.datetime.now()
-    _nowstr = javaTime()
+    global startTime
+
+    startTime = timstr()
 
     createConnection()
-    saveEvents( 27, _dt.hour )
 
-    findEvents( _nowstr, _dt.hour )
+    saveEvents()
+
+    findEvents()
 
 
 
-def send_post( json_data ):
-    _headers = {'Content-type': 'application/json'}
+def send_post( command, json_data ):
+    _headers = {'Content-type': 'application/json','Authorization' : 'apikey test'}
     _json_rqst_data = json.dumps(json_data)
 
     print("[request] " + _json_rqst_data)
-    connection.request('POST', '/post',  _json_rqst_data, _headers )
+    connection.request('POST', f'/{command}',  _json_rqst_data, _headers )
 
     response = connection.getresponse()
 
