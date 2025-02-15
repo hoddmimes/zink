@@ -66,88 +66,6 @@ def buildFindPage(result):
     return sb.toString()
 
 
-    def do_POST(self):
-        global configuration
-
-        content_length = int(self.headers['Content-Length'])
-        json_data_str = self.rfile.read(content_length)
-        try:
-            json_data = json.loads( json_data_str.decode('utf-8'))
-        except json.decoder.JSONDecodeError:
-            return self.send_error( 400, "Invalid json request " + str(json_data_str))
-
-        self.logmsg(msg="requestor host: " + self.client_address[0] + " rqst: " + json_data_str.decode('utf-8'))
-
-        _apikey = (None if not 'apikey' in json_data else json_data['apikey'])
-
-        if not "command" in json_data:
-            return self.send_error( 400, "Invalid request (command): " + json_data_str )
-
-        if not "data" in json_data:
-            return self.send_error( 400, "Invalid request (data): " + json_data_str)
-
-        if json_data['command'].upper() == 'SAVE':
-            return self.save_data( _apikey, json_data['data'] )
-
-
-        if json_data['command'].upper() == 'FIND':
-            return self.find_data( _apikey, json_data['data'] )
-
-        self.send_error( 400, "Invalid command: " + str( json_data ))
-        return self.logmsg(400, "Invalid command: " + str( json_data ))
-
-
-
-    def find_data( self, apikey, rqst_data):
-        if not "application" in rqst_data:
-            return self.send
-            error( 400, "Invalid request (data): " + str( rqst_data ))
-
-        if authorization and authorization.isFindRestricted() and not apikey:
-            return self.send_error( 400,'invalid query parameter "apikey" is missing')
-
-
-        if authorization and authorization.isFindRestricted() and not authorization.checkApiKey( apikey,'FIND'):
-            return self.send_error( 401,'unauthorized api-key')
-
-        rqst_data = self.defData( rqst_data )
-        _entries = db.find( rqst_data['application'], rqst_data['tag'], rqst_data['before'], rqst_data['after'],rqst_data['limit'])
-
-        self.send_response(200)
-        self.send_header('Content-Type', 'application/json')
-        self.end_headers()
-        _result = {'data': _entries }
-
-        self.wfile.write(json.dumps(_entries).encode('utf-8'))
-        self.logmsg( 200, json.dumps(_entries))
-
-
-    def save_data( self, apikey, param_data ):
-
-        if not "application" in param_data:
-            return self.send_error( 400, "Invalid request (application): " + str( param_data ))
-
-        if not "data" in param_data:
-            return self.send_error( 400, "Invalid request (data): " + str( param_data ))
-
-        if authorization and authorization.isSaveRestricted() and not apikey:
-            return self.send_error(400,'invalid query parameter "apikey" is missing')
-
-        if authorization and authorization.isFindRestricted() and not authorization.checkApiKey( apikey,'SAVE'):
-            return self.send_error(401,'unauthorized api-key')
-
-
-        global db
-        param_data = self.defData( param_data )
-        db.save( param_data['application'], param_data['tag'], param_data['data'])
-        self.send_response(200)
-        self.send_header('Content-Type', 'application/json')
-        self.end_headers()
-        self.logmsg(stscode=203)
-
-
-
-
 
 def connectDatabase():
     global configuration
@@ -368,9 +286,6 @@ def startWebServer():
         Aux.tosyslog(f"Internal server error: {str(e)}")
         zlog(f"Internal server error: {str(e)}")
         return jsonify({"error": str(e)}), 500
-
-
-
 
 
 def main():
