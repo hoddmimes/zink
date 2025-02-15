@@ -36,8 +36,10 @@ The post data in a _save_ have the following Json format
 {
   'application' : string
   'tag' : string
-  'data' : string }
+  'data' : string
+}
 ```
+
 **_NOTE:_** \
     _'data.tag' is optional in save requests_
 
@@ -78,7 +80,7 @@ The configuration file has the following format
 
 **_For Sqlite3 usage_**
 
-```json
+c
 {
     "verbose" : true,
     "logfile" : null,
