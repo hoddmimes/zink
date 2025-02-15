@@ -46,6 +46,7 @@ The post data in a _save_ have the following Json format
 **FIND events**
 The URL path to the POST **find** entry is "/save" e.g. _https://<host>/find_
 The post data in a _find_ have the following Json format
+
 ```json
 {
   'application': string
@@ -55,6 +56,7 @@ The post data in a _find_ have the following Json format
   'limit': int
 }
 ```
+
 **_NOTE:_** \
 _'application' is mandatory_\
 _'data.tag','data.after','data.before' and limit are optional_\
@@ -67,6 +69,7 @@ It's possible do find Zink events directly from an ordinary browser via accessin
 ```
 https://localhost:8282/FIND?apikey=6ad345f621&application=frotz&tag=foo&before=2025-01-11&after=2025-01-01 20:22
 ```
+
 **_NOTE:_** \
 _'application' is a mandatory query parameter_ \
 _'apikey' maybe mandatory or not depending on the server configuration_ \
@@ -80,7 +83,7 @@ The configuration file has the following format
 
 **_For Sqlite3 usage_**
 
-c
+```json
 {
     "verbose" : true,
     "logfile" : null,
