@@ -34,7 +34,7 @@ def buildHtmlRow(row):
     sb.append('</tr>')
     sb.append(f'<td style="text-align: center;border-collapse: collapse;border: 1px solid darkgray">{row["time"]}</td>')
     sb.append(f'<td style="text-align: center;border-collapse: collapse;border: 1px solid darkgray">{row["application"]}</td>')
-    sb.append(f'<td style="text-align: center;border-collapse: collapse;border: 1px solid darkgray">{row.get("tag", '')}</td>')
+    sb.append(f'<td style="text-align: center;border-collapse: collapse;border: 1px solid darkgray">{row.get("tag", "")}</td>')
     sb.append(f'<td style="text-align: center;border-collapse: collapse;border: 1px solid darkgray">{row["data"]}</td>')
     sb.append('<tr>')
     return sb.toString()

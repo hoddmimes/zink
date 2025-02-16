@@ -10,7 +10,7 @@ startTime = None
 
 def createConnection():
     global connection
-    connection = http.client.HTTPSConnection('127.0.0.1', port=8282, context = ssl._create_unverified_context())
+    connection = http.client.HTTPSConnection('192.168.42.11', port=8282, context = ssl._create_unverified_context())
 
 def timstr():
     now = datetime.datetime.now();
