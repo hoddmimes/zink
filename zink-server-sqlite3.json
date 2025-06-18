@@ -6,7 +6,7 @@
         "save_restricted": true,
         "find_restricted": true
     },
-   "http_port": "8282",
+   "https_port": "8282",
    "interface" : "0.0.0.0",
    "ssl": {
       "key": "../key.pem",

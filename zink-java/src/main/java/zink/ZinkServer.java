@@ -10,17 +10,19 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 
-public class Zink
+public class ZinkServer
 {
     DBBase db;
     Javalin mApp;
     JsonObject jConfig;
     Logger mLogger;
     Authorize mAuthorize;
-    static Zink sZinkServer;
+    static ZinkServer sZinkServer;
     boolean mVerbose = false;
 
     private void loadConfig(String[] pArgs) {
@@ -64,8 +66,8 @@ public class Zink
             // load Api keys
             File tApiKeyFile = new File(tApiKeysFilename);
                 if (tApiKeyFile.exists() && tApiKeyFile.canRead()) {
-                    JsonObject jAuthApiKeys = JsonParser.parseReader(new FileReader(tApiKeysFilename)).getAsJsonObject();
-                    mAuthorize = new Authorize(jAuthApiKeys.get("api-keys").getAsJsonArray(), jAuthConfig.get("save_restricted").getAsBoolean(), jAuthConfig.get("find_restricted").getAsBoolean());
+                    JsonObject jAuthorize= JsonParser.parseReader(new FileReader(tApiKeysFilename)).getAsJsonObject();
+                    mAuthorize = new Authorize( jAuthorize, jAuthConfig.get("save_restricted").getAsBoolean(), jAuthConfig.get("find_restricted").getAsBoolean() );
                     mLogger.log("loaded API keys (" + mAuthorize.size() + ") from file: " + tApiKeysFilename );
                 } else {
                     mLogger.log("Warning: API key file not found or could not be read, file : " + tApiKeysFilename );
@@ -80,25 +82,16 @@ public class Zink
         int port = 0;
         boolean tFlag = false;
 
-        if (jConfig.has("http_port")) {
-            JsonElement jsonElement = jConfig.get("http_port");
-            if (!jsonElement.isJsonNull()) {
-                tFlag = true;
-                port = jsonElement.getAsInt();
-            }
-        }
-
-        final boolean tInsecurePort = tFlag;
         final int https_port = jConfig.get("https_port").getAsInt();
-        final int http_port = port;
 
+
+        JsonObject jSSL = jConfig.get("ssl").getAsJsonObject();
         SslPlugin sslPlugin = new SslPlugin(conf -> {
-            conf.pemFromPath("cert.pem", "key.pem");
-            conf.insecure=tInsecurePort;
+            conf.pemFromPath(jSSL.get("cert").getAsString(), jSSL.get("key").getAsString());
+            conf.insecure=false;
             conf.http2=true;
             conf.sniHostCheck=false;
             conf.securePort=https_port;
-            conf.insecurePort=http_port;
         });
 
         mApp = Javalin.create( config -> {
@@ -195,12 +188,36 @@ public class Zink
                     tParams.get("before"),
                     tParams.get("after"),
                     Integer.parseInt(tParams.get("limit")));
-
+            ctx.contentType("text/html");
             ctx.result( HtmlBuilder.buildTable(getQryHdr( tParams ), jResult));
 
         } catch (Exception e) {
             ctx.status(500).result(e.getMessage());
         }
+    }
+
+    public static void deleteS( Context ctx ) {
+        sZinkServer.delete(ctx);
+    }
+
+    public void delete( Context ctx ) {
+        mLogger.log("[REQUEST [" + ctx.method() + "] rmthst: " + ctx.req().getRemoteHost() + " url: " + ctx.req().getRequestURL().toString());
+        try {
+            String tApiKey = getApiKey(ctx);
+            if ((mAuthorize != null) && mAuthorize.isSaveRestricted()) {
+                if (!mAuthorize.validate(tApiKey, Authorize.Action.DELETE)) {
+                    ctx.status(401).result("unauthorized apikey");
+                }
+            }
+
+            db.delete();
+            ctx.status(200).result("deleted");
+        }
+        catch( DBException e) {
+            ctx.status(500).result(e.getMessage());
+        }
+
+
     }
 
     public static void postSaveS( Context ctx ) {
@@ -273,10 +290,11 @@ public class Zink
 
 
     private void declare() {
-        mApp.get("/hello", Zink::getHelloS);
-        mApp.get("/find", Zink::getFindS);
-        mApp.post("/find", Zink::postFindS);
-        mApp.post("/save", Zink::postSaveS);
+        mApp.get("/hello", ZinkServer::getHelloS);
+        mApp.get("/find", ZinkServer::getFindS);
+        mApp.post("/find", ZinkServer::postFindS);
+        mApp.post("/save", ZinkServer::postSaveS);
+        mApp.delete("/delete", ZinkServer::deleteS);
     }
     private void run() {
       mApp.start();
@@ -295,25 +313,28 @@ public class Zink
         }
     }
     static private HashMap<String,String> paramsToMap( Context ctx ) {
-        HashMap<String,String> tMap = new HashMap<>();
+        HashMap<String,String> tParams = new HashMap<>();
 
         if (ctx.method().toString().equals("GET")) {
-            ctx.pathParamMap();
+            Map<String, List<String>> tMapLst = ctx.queryParamMap();
+            for(Map.Entry<String, List<String>> p : tMapLst.entrySet() ) {
+                tParams.put(p.getKey(), p.getValue().get(0));
+            }
         } else  if (ctx.method().toString().equals("POST")) {
             String jString = ctx.body();
             JsonObject jParams = JsonParser.parseString( jString ).getAsJsonObject();
             for (Map.Entry<String, JsonElement> entry : jParams.entrySet()) {
-                tMap.put(entry.getKey(), entry.getValue().getAsString());
+                tParams.put(entry.getKey(), entry.getValue().getAsString());
             }
         }
-        if (!tMap.containsKey("limit")) {
-            tMap.put("limit", String.valueOf(Integer.MAX_VALUE));
+        if (!tParams.containsKey("limit")) {
+            tParams.put("limit", String.valueOf(Integer.MAX_VALUE));
         }
-        return tMap;
+        return tParams;
 
     }
     public static void main(String[] args) {
-        Zink s = new Zink();
+        ZinkServer s = new ZinkServer();
         s.sZinkServer = s;
         s.loadConfig( args );
         s.loadDB();

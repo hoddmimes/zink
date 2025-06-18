@@ -44,6 +44,25 @@ public class DBSqlite3 implements DBBase
         }
     }
 
+    @Override
+    public void delete() throws DBException {
+        try {
+            mConnection.close();
+            File tFile = new File( mSqlFile );
+            if (tFile.exists() || (tFile.canRead())) {
+                tFile.delete();
+            }
+            createDatabase();
+            openDatabase();
+            mSaveStatement = mConnection.prepareStatement( SQl_SAVE_STMT );
+
+        }
+        catch( Exception e) {
+           throw new DBException(e);
+        }
+    }
+
+
     private void createDatabase() throws DBException {
         String url = "jdbc:sqlite:" + mSqlFile;
 

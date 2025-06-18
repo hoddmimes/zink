@@ -155,7 +155,7 @@ def parseParameters():
         description="HTTPS server capturing, event from HTTP clients",
     )
 
-    parser.add_argument("-cfg", "--configuration" ,  default="./zink-server-sqlite3.json")
+    parser.add_argument("-config", "--configuration" ,  default="./zink-server-sqlite3.json")
     args = parser.parse_args()
     configuration_file = Path(args.configuration)
 
@@ -272,11 +272,11 @@ def handle_post_save():
 def startWebServer():
     global configuration
 
-    Aux.tosyslog(f"Starting Web Service on interface {configuration['interface']} port {configuration['http_port']}")
+    Aux.tosyslog(f"Starting Web Service on interface {configuration['interface']} port {configuration['https_port']}")
 
     try:
         app.run(host=configuration["interface"],
-                port=int( configuration["http_port"]),
+                port=int( configuration["https_port"]),
                 debug=True,
                 ssl_context=(configuration["ssl"]["cert"],configuration["ssl"]["key"]))
     except KeyboardInterrupt:

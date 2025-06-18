@@ -26,8 +26,10 @@ public class HtmlBuilder {
                                 h3("Application: test").withStyle("font-family:arial; margin-top: 10px;"),
                                 table(
                                         tr(
-                                                th("name").withStyle("text-align: center;border-collapse: collapse;border: 1px solid darkgray"),
-                                                th("value").withStyle("text-align: center;border-collapse: collapse;border: 1px solid darkgray")
+                                                th("Time").withStyle("text-align: center;border-collapse: collapse;border: 1px solid darkgray"),
+                                                th("Application").withStyle("text-align: center;border-collapse: collapse;border: 1px solid darkgray"),
+                                                th("Tag").withStyle("text-align: center;border-collapse: collapse;border: 1px solid darkgray"),
+                                                th("Data").withStyle("text-align: center;border-collapse: collapse;border: 1px solid darkgray")
                                         ),
                                         (each(tRows, r -> tr(
                                                 td(getAttribute("time", r)).withStyle("text-align: center;border-collapse: collapse;border: 1px solid darkgray"),
