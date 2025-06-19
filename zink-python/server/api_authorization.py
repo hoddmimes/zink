@@ -11,6 +11,7 @@ class ApiAuthorization():
         self.zlogger = zlogger
         self.find_restricted = find_restricted
         self.save_restricted = save_restricted
+        self.delete_api_key = api_keys['delete-key']
 
     def isFindRestricted(self):
         return self.find_restricted
@@ -27,6 +28,14 @@ class ApiAuthorization():
 
         if not key:
             return False
+
+        if operation == 'DELETE':
+            if not self.delete_api_key:
+                return False
+            if self.delete_api_key ==  key:
+                return True
+            return False
+
 
         for k in self.api_keys['api-keys']:
             if k['key'] == key:

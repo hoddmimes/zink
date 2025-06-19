@@ -38,6 +38,23 @@ class sqlite3_db(db_base):
 
         Aux.tosyslog("Created database " + db_file )
 
+    def delete(self):
+        global db_file
+        global db_connection
+        global db_cursor
+
+        db_cursor.close()
+        db_connection.close()
+
+        os.remove(db_file)
+        self.connect()
+        return "database " + db_file + " deleted and recreated"
+
+
+
+
+
+
     def connect(self):
         global db_file
         global db_connection

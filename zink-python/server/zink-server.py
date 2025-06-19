@@ -139,6 +139,8 @@ def loadAuthorization():
         if 'save_restricted' in configuration['authorization']:
             _save_restricted = configuration['authorization']['save_restricted']
 
+
+
         authorization = ApiAuthorization( _api_keys, _find_restricted, _save_restricted, zlogger )
         zlog(f"Loaded ({len(_api_keys['api-keys'])}) api-keys fom api-key-file {configuration['authorization']['file']}")
         Aux.tosyslog(f"Loaded authorization file {configuration['authorization']['file']}")
@@ -181,6 +183,27 @@ def sendError( status, msg=None):
         zlog(f"[RESPONSE] status: {status} msg: {str(msg)}")
 
     return app.response_class(response=msg, status=status, mimetype='text/html')
+
+@app.route('/delete', methods=['DELETE'])
+def handle_delete():
+    zlog(f"[REQUEST] [{request.method}] rmthst: {request.remote_addr} url: {request.url}")
+    _apikey = request.authorization.token
+
+    if authorization and not _apikey:
+        return sendError( 400,'invalid query parameter "apikey" is missing')
+
+    if not authorization:
+        return sendError( 400,'authorization must be enabled')
+
+    if not authorization.checkApiKey( _apikey,'DELETE'):
+        return sendError( 401,'unauthorized apikey')
+
+    _html_string = db.delete()
+    zlog("[RESPONSE] status: 200 database deleted")
+    return app.response_class(response=str(_html_string.encode('utf-8')), status=200, mimetype='text/html')
+
+
+
 
 @app.route('/find', methods=['GET'])
 def handle_get():
