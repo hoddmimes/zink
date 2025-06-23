@@ -73,7 +73,7 @@ public class ZinkClient
 
     private void findData() {
         JsonObject rqst;
-        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss,SSS");
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
 
 
         long before,after;
@@ -117,7 +117,7 @@ public class ZinkClient
             }
             JsonArray jFinds = JsonParser.parseString(response.body()).getAsJsonArray();
             for (int i = 0; i < jFinds.size(); i++) {
-                System.out.println( jFinds.get(i).getAsJsonObject().toString());
+                System.out.println( "    " + jFinds.get(i).getAsJsonObject().toString());
             }
         }
         catch( Exception e ) {
@@ -144,7 +144,7 @@ public class ZinkClient
 
                 HttpResponse<String> response = mClient.send(request, HttpResponse.BodyHandlers.ofString());
                 if (response.statusCode() != 200) {
-                    System.out.println("[Save Error] Status: " + response.statusCode() + " Eroor: " + response.body());
+                    System.out.println("[Save Error] Status: " + response.statusCode() + " Error: " + response.body());
                 }
 
                 if ((i % 10) == 0) {
@@ -154,7 +154,9 @@ public class ZinkClient
             }
 
             mStopSaveTime = System.currentTimeMillis();
-            System.out.println("[SAVED] %d records".formatted(RECORD_COUNT) + " save-diff: " + (mStopSaveTime - mStartSaveTime) + " ms.");
+            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss.SSS");
+            System.out.println("[SAVED] %d records".formatted(RECORD_COUNT) + " save-diff: " + (mStopSaveTime - mStartSaveTime) + " ms. " +
+                    " start: " + sdf.format( mStartSaveTime ) + " stop: " + sdf.format( mStopSaveTime ));
         }
         catch( Exception e) {
             new RuntimeException(e);

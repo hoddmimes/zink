@@ -3,10 +3,10 @@
    "logfile" : null,
    "authorization" : {
      "file": "../zink-api-keys.json",
-     "save-restricted": true,
-     "find-restricted": false
+     "save_restricted": true,
+     "find_restricted": false
    },
-   "http_port": "8282",
+   "https_port": "8282",
    "interface" : "0.0.0.0",
    "ssl": {
       "key": "../key.pem",

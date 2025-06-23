@@ -4,7 +4,7 @@ import com.google.gson.JsonArray;
 
 public interface DBBase
 {
-    public void connect();
+    public void connect() throws DBException;
 
     public void delete() throws DBException;
 

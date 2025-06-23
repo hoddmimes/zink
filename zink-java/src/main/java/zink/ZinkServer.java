@@ -73,7 +73,7 @@ public class ZinkServer
                     mLogger.log("Warning: API key file not found or could not be read, file : " + tApiKeysFilename );
                 }
         } catch (IOException e) {
-            new RuntimeException(e);
+            throw new RuntimeException(e);
         }
 
     }
@@ -305,11 +305,17 @@ public class ZinkServer
         JsonObject jDbConfig = jDatabase.get("configuration").getAsJsonObject();
         if (jDatabase.get("type").getAsString().contentEquals("sqlite3")) {
             db = new DBSqlite3(jDbConfig.get("db_file").getAsString());
-            db.connect();
-            mLogger.log("Conneted to sqlite3 database \"" + jDbConfig.get("db_file").getAsString() + "\"");
-        } else if (jDatabase.get("type").getAsString().contentEquals("mongo")) {
-            mLogger.log("Conneted to Mongo database " + jDbConfig.get("db_file").getAsString() +
-                    " host: " + jDbConfig.get("host").getAsString() + " port: " + jDbConfig.get("host").getAsInt());
+            try {db.connect();}
+            catch( DBException e) { throw new RuntimeException(e);}
+            mLogger.log("Connected to sqlite3 database \"" + jDbConfig.get("db_file").getAsString() + "\"");
+        } else if (jDatabase.get("type").getAsString().contentEquals("mongodb")) {
+            db = new DBMongo(jDbConfig.get("db").getAsString(), jDbConfig.get("host").getAsString(), jDbConfig.get("port").getAsInt());
+            try { db.connect();}
+            catch( DBException e) { throw new RuntimeException(e);}
+            mLogger.log("Connected to Mongo database " + jDbConfig.get("db").getAsString() +
+                    " host: " + jDbConfig.get("host").getAsString() + " port: " + jDbConfig.get("port").getAsInt());
+        } else {
+            throw new RuntimeException("Unknown database type: " + jDatabase.get("type").getAsString());
         }
     }
     static private HashMap<String,String> paramsToMap( Context ctx ) {

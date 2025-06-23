@@ -11,7 +11,9 @@ repositories {
 
 dependencies {
     implementation("com.j2html:j2html:1.6.0")
-    implementation group: 'org.mongodb', name: 'bson', version: '4.11.1'
+    implementation group: 'org.mongodb', name: 'mongodb-driver-sync', version: '4.11.1'
+
+
     implementation group: 'org.xerial', name: 'sqlite-jdbc', version: '3.44.1.0'
     implementation("com.google.code.gson:gson:2.13.1")
     implementation("io.javalin.community.ssl:ssl-plugin:6.6.0")
