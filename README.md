@@ -5,6 +5,7 @@
 If you need to log events to a remote host, Zink might be a tool worth exploring.
 
 Zink is a simple Python HTTP server application that listens for HTTP requests to either save or find events. The idea is that client applications or scripts can send **_Save_** or **_Find_** requests to the server.
+(There is now also a Java implementation of the Zink server)
 
 The server uses an embedded _SQLite3_ or _MongoDB_ database to persist events.
 
@@ -60,8 +61,8 @@ The post data in a _find_ have the following Json format
 **_NOTE:_** \
 _'application' is mandatory_\
 _'data.tag','data.after','data.before' and limit are optional_\
-_'data.after' and 'data.before' are time strings have the following format 'yyyy-MM-dd HH:mm:ss.SSS'. They do not need to be complete. The time strings are padded._\
-_'limit' specifies max number of events that should be retreived, latest first.
+_'data.after' and 'data.before' are time strings have the following format 'yyyy-MM-dd HH:mm:ss.SSS'. They do not need to be complete. The time strings will be padded by server if not being fully specified._\
+_'limit' specifies max number of events that should be retrieved, latest first. If omitted the server will set the limit to the MAX Integer value.
 
 
 #### GET Requests
@@ -73,7 +74,7 @@ https://localhost:8282/FIND?apikey=6ad345f621&application=frotz&tag=foo&before=2
 **_NOTE:_** \
 _'application' is a mandatory query parameter_ \
 _'apikey' maybe mandatory or not depending on the server configuration_ \
-_remaing parameters are optional_ \
+_remaining parameters are optional_ \
 
 
 ## Server Configuration
