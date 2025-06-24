@@ -85,7 +85,6 @@ def connectDatabase():
 
 
 
-
 def loadConfiguration( config_file ):
     global configuration
 

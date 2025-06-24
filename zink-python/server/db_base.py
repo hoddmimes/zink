@@ -14,3 +14,6 @@ class db_base(abc.ABC):
     def find(self, application, tag, before, after, limit):
         pass
 
+    @abc.abstractmethod
+    def delete(self):
+        pass

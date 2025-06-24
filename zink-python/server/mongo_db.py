@@ -10,6 +10,7 @@ db_name = None
 
 db_collection = None
 db = None
+db_client  = None
 
 
 class mongo_db(db_base):
@@ -24,36 +25,48 @@ class mongo_db(db_base):
         db_port = port
         db_name = name
 
-    def _dbExists( self, dbClient, name ):
-        dbs = dbClient.list_database_names()
+    def _dbExists( self, name ):
+        dbs = db_client.list_database_names()
         if [item for item in dbs if item == name] == []:
             return False
         else:
             return True
 
-    def _createDatabase( self, dbClient, dbHost, dbName ):
+    def _createDatabase( self, dbHost, dbName ):
         global db
         Aux.tosyslog(f'Created database "{dbName}" at {dbHost}')
-        db = dbClient[ dbName ];
+        db = db_client[ dbName ];
         dbCollection = db['entries'];
         dbCollection.create_index('application', unique = False)
         dbCollection.create_index('tag', unique = False)
         dbCollection.create_index('time', unique = False)
 
 
+    def delete(self):
+        global db
+        global db_client
+        global db_collection
+
+        db_client.drop_database( db_name )
+        db_client.close()
+        db_client = None
+        db = None
+        self.connect()
+        return "Successfully deleted and created database " + db_name
 
 
     def connect(self):
         global db_host
         global db_name
         global db_port
+        global db_client
 
-        dbClient = pymongo.MongoClient("mongodb://" + db_host + ":" + str(db_port))
-        if not self._dbExists( dbClient, db_name):
-            self._createDatabase( dbClient, db_host, db_name)
+        db_client = pymongo.MongoClient("mongodb://" + db_host + ":" + str(db_port))
+        if not self._dbExists( db_name):
+            self._createDatabase(  db_host, db_name)
 
         try:
-            dbClient.admin.command('ismaster')
+            db_client.admin.command('ismaster')
         except Exception as e:
             Aux.tosyslog( logging.FATAL, "Failed to connect to DB, reason: " + str(e))
             exit(0)
@@ -61,7 +74,7 @@ class mongo_db(db_base):
         global db
         global db_collection
 
-        db = dbClient[ "zink" ]
+        db = db_client[ "zink" ]
         db_collection = db["entries"]
         Aux.tosyslog( "successfully connected to " + db_name + " at " + db_host );
 
